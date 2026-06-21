@@ -1,0 +1,6 @@
+node_modules/
+.env
+config.json
+mc_server_mock/
+test.js
+test_api.js

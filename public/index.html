@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Server Console</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div id="login-screen" class="screen hidden">
+    <div class="login-box minecraft-panel">
+      <h1 class="pixel-title">MC SERVER</h1>
+      <h2 class="pixel-subtitle">DASHBOARD</h2>
+      
+      <div id="error-banner" class="hidden error-box">
+        Access Denied: Your Discord ID is not whitelisted.
+      </div>
+      
+      <div class="login-actions">
+        <a href="/auth/login" class="mc-btn primary">LOG IN WITH DISCORD</a>
+        <a href="/auth/dev-login" id="dev-login-btn" class="mc-btn secondary hidden">DEV BYPASS</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="dashboard-screen" class="screen hidden">
+    <header class="minecraft-header">
+      <div class="logo-area">
+        <span class="pulse-indicator status-offline" id="status-dot"></span>
+        <h1 class="header-title">VPS CONSOLE</h1>
+      </div>
+      <div class="user-profile" id="user-info">
+      </div>
+    </header>
+
+    <main class="dashboard-grid">
+      <section class="controls-sec minecraft-panel">
+        <h3 class="sec-title">Server Controls</h3>
+        <div class="status-card">
+          <div class="stat-row">
+            <span>Status:</span>
+            <strong id="status-text" class="status-offline">Offline</strong>
+          </div>
+          <div class="stat-row">
+            <span>Session:</span>
+            <span id="session-name">mc-server</span>
+          </div>
+        </div>
+
+        <div class="control-actions">
+          <button id="btn-start" class="mc-btn green-btn">START</button>
+          <button id="btn-stop" class="mc-btn red-btn">STOP</button>
+          <button id="btn-kill" class="mc-btn dark-red-btn">FORCE KILL</button>
+        </div>
+
+        <h3 class="sec-title" style="margin-top: 25px;">VPS Metrics</h3>
+        <div class="status-card metrics-card">
+          <div class="metric-row">
+            <div class="metric-info-row">
+              <span class="metric-label">CPU:</span>
+              <span id="cpu-value" class="metric-value">0%</span>
+            </div>
+            <div class="mc-progress-bar">
+              <div id="cpu-bar" class="mc-progress" style="width: 0%;"></div>
+            </div>
+          </div>
+          <div class="metric-row" style="margin-top: 12px;">
+            <div class="metric-info-row">
+              <span class="metric-label">RAM:</span>
+              <span id="ram-value" class="metric-value">0%</span>
+            </div>
+            <div class="mc-progress-bar">
+              <div id="ram-bar" class="mc-progress" style="width: 0%;"></div>
+            </div>
+            <span id="ram-raw" class="metric-subtext">0GB / 0GB</span>
+          </div>
+          <div style="margin-top: 15px; background: #111; border: 2px solid #5a5a5a; padding: 4px; box-shadow: inset 1px 1px 2px #000;">
+            <canvas id="metrics-chart" width="250" height="75" style="display: block; image-rendering: pixelated; width: 100%; height: 75px;"></canvas>
+          </div>
+        </div>
+
+        <h3 class="sec-title" style="margin-top: 25px;">Quick Actions</h3>
+        <div class="quick-actions-grid">
+          <button class="mc-btn sm-btn quick-cmd-btn" data-cmd="list">List Players</button>
+          <button class="mc-btn sm-btn quick-cmd-btn" data-cmd="save-all">Save World</button>
+          <button class="mc-btn sm-btn quick-cmd-btn" data-cmd="time set day">Time: Day</button>
+          <button class="mc-btn sm-btn quick-cmd-btn" data-cmd="time set night">Time: Night</button>
+          <button class="mc-btn sm-btn quick-cmd-btn" data-cmd="whitelist on">Whitelist: On</button>
+          <button class="mc-btn sm-btn quick-cmd-btn" data-cmd="whitelist off">Whitelist: Off</button>
+        </div>
+
+        <h3 class="sec-title" style="margin-top: 25px;">Settings</h3>
+        <div class="status-card" style="padding: 12px; margin-bottom: 0;">
+          <div class="setting-row" style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px;">
+            <label style="font-family: var(--mc-font-heading); font-size: 8px; color: #aaa; text-align: left; display: block;">Screen Name:</label>
+            <input type="text" id="setting-screen-name" style="font-family: var(--mc-font-body); font-size: 18px; padding: 4px 8px; background: #111; border: 2px solid #333; color: #fff; outline: none; width: 100%;">
+          </div>
+          <div class="setting-row" style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;">
+            <label style="font-family: var(--mc-font-heading); font-size: 8px; color: #aaa; text-align: left; display: block;">Start Cmd:</label>
+            <input type="text" id="setting-start-cmd" style="font-family: var(--mc-font-body); font-size: 18px; padding: 4px 8px; background: #111; border: 2px solid #333; color: #fff; outline: none; width: 100%;">
+          </div>
+          <button id="btn-save-settings" class="mc-btn green-btn" style="width: 100%; font-size: 9px; padding: 8px 4px;">SAVE SETTINGS</button>
+        </div>
+      </section>
+
+      <section class="terminal-sec minecraft-panel">
+        <div class="terminal-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+          <h3 class="sec-title" style="margin-bottom: 0;">Live Server Console</h3>
+          <input type="text" id="terminal-filter" placeholder="Filter console logs..." style="font-family: var(--mc-font-body); font-size: 16px; padding: 6px 12px; width: 200px; background-color: #111; border: 3px solid #333; color: #fff; outline: none;">
+        </div>
+        <div id="terminal-output" class="terminal-log">
+        </div>
+        <form id="terminal-form" class="terminal-input-row">
+          <span class="cmd-prefix">&gt;</span>
+          <input type="text" id="terminal-input" placeholder="Type minecraft command..." autocomplete="off">
+          <button type="submit" class="mc-btn">SEND</button>
+        </form>
+      </section>
+    </main>
+
+    <section class="files-sec minecraft-panel">
+      <div class="files-header">
+        <h3 class="sec-title">File Explorer</h3>
+        <div class="path-bar">
+          <span>Path:</span>
+          <strong id="current-path">/</strong>
+        </div>
+        <div class="file-actions">
+          <button id="btn-backup" class="mc-btn green-btn">CREATE BACKUP</button>
+          <button id="btn-new-folder" class="mc-btn green-btn">NEW FOLDER</button>
+          <button id="btn-up-dir" class="mc-btn">UP DIRECTORY</button>
+          <button id="btn-new-file" class="mc-btn green-btn">NEW FILE</button>
+          <label class="mc-btn file-upload-label">
+            UPLOAD FILE
+            <input type="file" id="file-uploader" style="display: none;">
+          </label>
+        </div>
+      </div>
+
+      <div class="files-table-container">
+        <table class="files-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Size</th>
+              <th>Last Modified</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="files-list">
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="editor-modal" class="modal hidden">
+    <div class="modal-content minecraft-panel">
+      <div class="modal-header">
+        <h3 class="sec-title" id="editor-title">Editing: config.json</h3>
+        <button class="close-btn" id="btn-close-editor">&times;</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="editor-textarea" spellcheck="false"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-save-file" class="mc-btn green-btn">SAVE</button>
+        <button id="btn-cancel-file" class="mc-btn">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
