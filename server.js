@@ -114,6 +114,16 @@ function isRunning() {
   return Promise.resolve(mcProcess !== null);
 }
 
+// Clean up child process if panel dies
+['exit', 'SIGINT', 'SIGTERM'].forEach(sig => {
+  process.on(sig, () => {
+    if (mcProcess) {
+      try { mcProcess.kill('SIGKILL'); } catch (e) {}
+    }
+    if (sig !== 'exit') process.exit();
+  });
+});
+
 let cronTasks = [];
 function setupCron() {
   cronTasks.forEach(t => t.stop());
