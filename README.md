@@ -1,23 +1,45 @@
 # rack
 
-basic minecraft server panel.
+basic minecraft server panel. runs your server in a screen session and streams the logs to a web dashboard.
 
 ## features
-- manage files, upload, edit, rename, delete
-- live terminal stream, send commands
-- start/stop/kill server via screen
+- file manager (upload, edit, rename, delete, create backups)
+- live terminal stream, send commands direct to console
+- start/stop/force kill server via screen
 - live metrics (cpu/ram)
-- discord oauth whitelist login
+- discord oauth whitelist login so randoms can't nuke your server
 
-## setup
-1. clone it
-2. `npm i`
-3. copy `config.example.json` to `config.json` (setup your allowed discord IDs and mc directory path)
-4. set env variables (`.env`):
-   ```
+## requirements
+- nodejs & npm
+- git
+- screen (for keeping the mc server alive)
+- pm2 (recommended for keeping the dashboard alive)
+
+## setup locally
+1. `git clone https://github.com/sativalol/mc-dashboard.git`
+2. `cd mc-dashboard && npm i`
+3. copy `config.example.json` to `config.json`.
+4. set env variables in a `.env` file:
+   ```env
    DISCORD_CLIENT_ID=...
    DISCORD_CLIENT_SECRET=...
    DISCORD_REDIRECT_URI=http://localhost:3000/auth/callback
-   SESSION_SECRET=some-random-string
+   SESSION_SECRET=make-up-some-random-string
    ```
 5. `npm start`
+
+## vps deployment
+getting this on a linux box is basically the same, just a few extra steps:
+1. install the junk: `sudo apt update && sudo apt install nodejs npm git screen -y`
+2. clone the repo and `npm i`
+3. copy `config.example.json` to `config.json`. **important**: change `mcPath` to the absolute linux path of your server (e.g. `/home/mc/server`). don't use windows paths. update `startCmd` to whatever starts your server.
+4. setup your `.env`. make sure `DISCORD_REDIRECT_URI` points to your VPS IP or domain (e.g. `http://YOUR_VPS_IP:3000/auth/callback`).
+5. install pm2 so the dashboard doesn't die when you close ssh: `sudo npm i -g pm2`
+6. run it: `pm2 start server.js --name "mc-dashboard"`
+7. save it to restart on boot: `pm2 save && pm2 startup`
+
+## troubleshooting
+
+**"Invalid OAuth2 redirect_uri" on login**
+your `.env` redirect uri doesn't exactly match what you put in the discord developer portal.
+go to discord dev portal -> your app -> OAuth2 -> Redirects. make sure `http://YOUR_VPS_IP:3000/auth/callback` is added there and save changes.
