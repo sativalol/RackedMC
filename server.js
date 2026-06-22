@@ -92,7 +92,7 @@ function run_cmd(cmd) {
   }
   return new Promise((res, rej) => {
     const safeCmd = cmd.replace(/"/g, '\\"');
-    exec(`screen -S "${cfg.screenSessionName}" -p 0 -X stuff "${safeCmd}\r"`, (err) => {
+    exec(`screen -S "${cfg.screenSessionName}" -X eval 'stuff "${safeCmd}\\015"'`, (err) => {
       if (err) rej(err);
       else res();
     });
@@ -121,7 +121,8 @@ function isRunning() {
   if (isWin) return Promise.resolve(true); // close enough
   return new Promise((res) => {
     exec(`screen -list`, (err, out) => {
-      res(!err && out.includes(cfg.screenSessionName));
+      const regex = new RegExp(`\\.${cfg.screenSessionName}\\s+\\(`);
+      res(!err && regex.test(out));
     });
   });
 }
@@ -252,7 +253,11 @@ app.post('/api/action', check_auth, actionLimit, express.json(), async (req, res
       await run_cmd('stop');
       res.json({ ok: true });
     } else if (act === 'kill') {
-      if (!isWin) exec(`screen -S "${cfg.screenSessionName}" -X quit`);
+      if (!isWin) {
+        exec(`screen -S "${cfg.screenSessionName}" -X quit`, (err) => {
+          if (err) exec(`pkill -f "SCREEN.*${cfg.screenSessionName}"`);
+        });
+      }
       res.json({ ok: true });
     } else {
       res.status(400).json({ err: 'invalid action' });
