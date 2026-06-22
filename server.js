@@ -8,10 +8,54 @@ const axios = require('axios');
 const os = require('os');
 const JavaScriptObfuscator = require('javascript-obfuscator');
 const cron = require('node-cron');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const isWin = process.platform === 'win32';
 let mcProcess = null;
+let onlinePlayers = {}; // { username: { ip, loc } }
+
+// crypto setup for caching ips
+const ENC_KEY = crypto.createHash('sha256').update(process.env.SESSION_SECRET || 'unsafe_key_lmao').digest();
+const IV_LEN = 16;
+
+function encrypt(txt) {
+  const iv = crypto.randomBytes(IV_LEN);
+  const cipher = crypto.createCipheriv('aes-256-cbc', ENC_KEY, iv);
+  let enc = cipher.update(txt);
+  enc = Buffer.concat([enc, cipher.final()]);
+  return iv.toString('hex') + ':' + enc.toString('hex');
+}
+
+function decrypt(txt) {
+  try {
+    const parts = txt.split(':');
+    const iv = Buffer.from(parts.shift(), 'hex');
+    const encTxt = Buffer.from(parts.join(':'), 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', ENC_KEY, iv);
+    let dec = decipher.update(encTxt);
+    dec = Buffer.concat([dec, decipher.final()]);
+    return dec.toString();
+  } catch (err) {
+    return null; // close enough
+  }
+}
+
+let ipCache = {};
+const cacheFile = path.join(__dirname, 'ip_cache.enc');
+try {
+  if (fs.existsSync(cacheFile)) {
+    const raw = fs.readFileSync(cacheFile, 'utf8');
+    const dec = decrypt(raw);
+    if (dec) ipCache = JSON.parse(dec);
+  }
+} catch (err) { /* it is what it is */ }
+
+function saveIpCache() {
+  try {
+    fs.writeFileSync(cacheFile, encrypt(JSON.stringify(ipCache)), 'utf8');
+  } catch (err) { console.log(err); }
+}
 
 let cfg = {};
 try {
@@ -100,10 +144,46 @@ function start() {
     const logFile = path.join(cfg.mcPath, 'logs', 'latest.log');
     if (!fs.existsSync(path.dirname(logFile))) fs.mkdirSync(path.dirname(logFile), { recursive: true });
 
-    mcProcess.stdout.on('data', d => fs.appendFileSync(logFile, d));
+    mcProcess.stdout.on('data', d => {
+      const str = d.toString();
+      fs.appendFileSync(logFile, str);
+      
+      // parse player joins
+      const joinMatch = str.match(/([a-zA-Z0-9_]+)\[\/([0-9\.]+):\d+\] logged in/);
+      if (joinMatch) {
+        const pName = joinMatch[1];
+        const pIp = joinMatch[2];
+        if (cfg.trackPlayerIps !== false) {
+          if (ipCache[pIp]) {
+            onlinePlayers[pName] = { ip: pIp, loc: ipCache[pIp] };
+          } else {
+            axios.get(`http://ip-api.com/json/${pIp}`).then(r => {
+              if (r.data && r.data.status === 'success') {
+                const loc = `${r.data.city}, ${r.data.countryCode}`;
+                ipCache[pIp] = loc;
+                saveIpCache();
+                onlinePlayers[pName] = { ip: pIp, loc };
+              }
+            }).catch(() => {
+              onlinePlayers[pName] = { ip: pIp, loc: 'Unknown' };
+            });
+          }
+        } else {
+          onlinePlayers[pName] = { ip: 'Hidden', loc: 'Hidden' };
+        }
+      }
+      
+      // parse leaves
+      const leaveMatch = str.match(/([a-zA-Z0-9_]+) lost connection/);
+      if (leaveMatch) {
+        delete onlinePlayers[leaveMatch[1]];
+      }
+    });
+    
     mcProcess.stderr.on('data', d => fs.appendFileSync(logFile, d));
     mcProcess.on('exit', () => {
       mcProcess = null;
+      onlinePlayers = {}; // clear out the ghosts
       fs.appendFileSync(logFile, `\n[${new Date().toLocaleTimeString()}] [Server thread/INFO]: Process exited.\n`);
     });
     res();
@@ -199,18 +279,23 @@ app.post('/auth/logout', (req, res) => {
 app.get('/api/status', check_auth, async (req, res) => {
   try {
     const running = await isRunning();
-    res.json({ running, startCmd: cfg.startCmd, cronJobs: cfg.cronJobs || [] });
+    res.json({ running, startCmd: cfg.startCmd, cronJobs: cfg.cronJobs || [], trackPlayerIps: cfg.trackPlayerIps !== false });
   } catch (err) {
     res.status(500).json({ err: err.message });
   }
 });
 
+app.get('/api/players', check_auth, (req, res) => {
+  res.json({ players: onlinePlayers });
+});
+
 app.post('/api/settings', check_auth, actionLimit, express.json(), (req, res) => {
-  const { startCmd, cronJobs } = req.body;
+  const { startCmd, cronJobs, trackPlayerIps } = req.body;
   if (!startCmd) return res.status(400).json({ err: 'bad args' });
 
   cfg.startCmd = startCmd;
   if (cronJobs) cfg.cronJobs = cronJobs;
+  cfg.trackPlayerIps = trackPlayerIps !== false;
 
   try {
     fs.writeFileSync(path.join(__dirname, 'config.json'), JSON.stringify(cfg, null, 2), 'utf8');

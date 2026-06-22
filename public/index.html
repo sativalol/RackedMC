@@ -89,10 +89,11 @@
           <button class="mc-btn sm-btn quick-cmd-btn" data-cmd="save-all">Save World</button>
           <button class="mc-btn sm-btn quick-cmd-btn" data-cmd="time set day">Time: Day</button>
           <button class="mc-btn sm-btn quick-cmd-btn" data-cmd="time set night">Time: Night</button>
-          <button onclick="run('whitelist on')">Whitelist: On</button>
-          <button onclick="run('whitelist off')">Whitelist: Off</button>
-          <button onclick="showModal('plugins-modal')" style="grid-column: span 2; border-color: #f39c12; color: #f39c12">Install Plugins</button>
-          <button onclick="showModal('cron-modal')" style="grid-column: span 2; border-color: #9b59b6; color: #9b59b6">Scheduled Tasks</button>
+          <button class="mc-btn sm-btn quick-cmd-btn" onclick="run('whitelist on')">Whitelist: On</button>
+          <button class="mc-btn sm-btn quick-cmd-btn" onclick="run('whitelist off')">Whitelist: Off</button>
+          <button onclick="showModal('players-modal')" class="mc-btn sm-btn blue-btn" style="grid-column: span 2;">Player Manager</button>
+          <button onclick="showModal('plugins-modal')" class="mc-btn sm-btn orange-btn" style="grid-column: span 2;">Install Plugins</button>
+          <button onclick="showModal('cron-modal')" class="mc-btn sm-btn purple-btn" style="grid-column: span 2;">Scheduled Tasks</button>
         </div>
 
         <h3 class="sec-title" style="margin-top: 25px;">Settings</h3>
@@ -104,6 +105,10 @@
           <div class="setting-row" style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;">
             <label style="font-family: var(--mc-font-heading); font-size: 8px; color: #aaa; text-align: left; display: block;">Start Cmd:</label>
             <input type="text" id="setting-start-cmd" style="font-family: var(--mc-font-body); font-size: 18px; padding: 4px 8px; background: #111; border: 2px solid #333; color: #fff; outline: none; width: 100%;">
+          </div>
+          <div class="setting-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <input type="checkbox" id="setting-track-ips" style="width: 16px; height: 16px;">
+            <label style="font-family: var(--mc-font-heading); font-size: 8px; color: #aaa;">Track Player IPs & Location</label>
           </div>
           <button id="btn-save-settings" class="mc-btn green-btn" style="width: 100%; font-size: 9px; padding: 8px 4px;">SAVE SETTINGS</button>
         </div>
@@ -181,28 +186,52 @@
 </div>
 
 <div id="plugins-modal" class="modal hidden">
-  <div class="modal-content" style="max-width: 600px;">
-    <h3 style="color:#f39c12">Install Plugin (Modrinth)</h3>
+  <div class="modal-content minecraft-panel" style="max-width: 600px; height: auto;">
+    <h3 class="sec-title" style="color:#e67e22">Install Plugin (Modrinth)</h3>
     <div style="display:flex; gap:10px; margin-bottom:15px">
-      <input type="text" id="plugin-search-input" placeholder="Search (e.g. LuckPerms)..." style="flex:1" onkeydown="if(event.key==='Enter') searchPlugins()">
-      <button onclick="searchPlugins()" style="width:auto">Search</button>
+      <input type="text" id="plugin-search-input" placeholder="Search (e.g. LuckPerms)..." style="flex:1; padding: 8px; background: #111; border: 3px solid #333; color: #fff; font-family: var(--mc-font-body); font-size: 18px;" onkeydown="if(event.key==='Enter') searchPlugins()">
+      <button onclick="searchPlugins()" class="mc-btn orange-btn" style="width:auto">Search</button>
     </div>
     <div id="plugin-results" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
     </div>
-    <button onclick="hideModal('plugins-modal')" style="margin-top:15px; width:100%">Close</button>
+    <button onclick="hideModal('plugins-modal')" class="mc-btn" style="margin-top:15px; width:100%">Close</button>
   </div>
 </div>
 
 <div id="cron-modal" class="modal hidden">
-  <div class="modal-content" style="max-width: 600px;">
-    <h3 style="color:#9b59b6">Scheduled Tasks</h3>
+  <div class="modal-content minecraft-panel" style="max-width: 600px; height: auto;">
+    <h3 class="sec-title" style="color:#9b59b6">Scheduled Tasks</h3>
     <div id="cron-list" style="margin-bottom: 15px; display:flex; flex-direction:column; gap:10px;"></div>
-    <div style="border: 1px dashed #333; padding: 10px; display: flex; flex-direction: column; gap: 5px;">
-      <input type="text" id="new-cron-expr" placeholder="Cron expression (e.g. 0 4 * * *)">
-      <input type="text" id="new-cron-cmd" placeholder="Command to run (e.g. say Restarting!)">
-      <button onclick="addCron()" style="border-color:#2ecc71; color:#2ecc71">Add Task</button>
+    <div style="border: 2px dashed #333; padding: 10px; display: flex; flex-direction: column; gap: 5px; background: #111;">
+      <input type="text" id="new-cron-expr" placeholder="Cron expression (e.g. 0 4 * * *)" style="padding: 4px; background: #222; border: 2px solid #444; color: #fff; font-family: var(--mc-font-body);">
+      <input type="text" id="new-cron-cmd" placeholder="Command to run (e.g. save-all)" style="padding: 4px; background: #222; border: 2px solid #444; color: #fff; font-family: var(--mc-font-body);">
+      <button onclick="addCron()" class="mc-btn green-btn" style="margin-top: 5px;">Add Task</button>
     </div>
-    <button onclick="hideModal('cron-modal')" style="margin-top:15px; width:100%">Close</button>
+    <button onclick="hideModal('cron-modal')" class="mc-btn" style="margin-top:15px; width:100%">Close</button>
+  </div>
+</div>
+
+<div id="players-modal" class="modal hidden">
+  <div class="modal-content minecraft-panel" style="width: 700px; max-width: 95%;">
+    <div class="modal-header">
+      <h3 class="sec-title" style="color:#3498db">Active Players</h3>
+      <button class="close-btn" onclick="hideModal('players-modal')">&times;</button>
+    </div>
+    <div class="files-table-container" style="flex: 1; border: 4px solid #111; background: #0b0b0b;">
+      <table class="files-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>IP Address</th>
+            <th>Location</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="players-list">
+          <tr><td colspan="4" style="text-align:center; color:#aaa; padding:20px;">Loading players...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 

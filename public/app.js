@@ -120,26 +120,33 @@ function showDash() {
 async function searchPlugins() {
   const q = document.getElementById('plugin-search-input').value;
   if (!q) return;
-  const res = document.getElementById('plugin-results');
-  res.innerHTML = '<span style="color:#aaa">Searching Modrinth...</span>';
+  const resDiv = document.getElementById('plugin-results');
+  resDiv.innerHTML = '<div style="color:#aaa; text-align:center;">Searching...</div>';
   try {
     const r = await fetch(`/api/modrinth/search?q=${encodeURIComponent(q)}`);
     const hits = await r.json();
-    if (!hits || !hits.length) {
-      res.innerHTML = '<span style="color:#e74c3c">No plugins found.</span>';
+    resDiv.innerHTML = '';
+    if (!hits.length) {
+      resDiv.innerHTML = '<div style="color:#ff5555; text-align:center;">No plugins found.</div>';
       return;
     }
-    res.innerHTML = hits.map(h => `
-      <div style="border:1px solid #444; padding:10px; background:#1e1e1e; display:flex; justify-content:space-between; align-items:center">
-        <div>
-          <div style="font-weight:bold; color:#f39c12">${h.title}</div>
-          <div style="font-size:0.8em; color:#aaa">${h.description}</div>
-        </div>
-        <button onclick="installPlugin('${h.project_id}')" style="margin:0; width:auto; border-color:#2ecc71; color:#2ecc71">Install</button>
-      </div>
-    `).join('');
-  } catch (e) {
-    res.innerHTML = '<span style="color:#e74c3c">Error: ' + e.message + '</span>';
+    for (const p of hits) {
+      const d = document.createElement('div');
+      d.style.cssText = 'background:#1a1a1a; padding:10px; border:2px solid #333; display:flex; justify-content:space-between; align-items:center;';
+      const info = document.createElement('div');
+      info.innerHTML = `<strong style="color:#f39c12; font-family:var(--mc-font-heading); font-size:12px;">${p.title}</strong><br><span style="color:#aaa; font-size:14px;">${p.description.substring(0, 50)}...</span>`;
+      
+      const btn = document.createElement('button');
+      btn.className = 'mc-btn sm-btn orange-btn';
+      btn.innerText = 'Install';
+      btn.onclick = () => installPlugin(p.project_id);
+      
+      d.appendChild(info);
+      d.appendChild(btn);
+      resDiv.appendChild(d);
+    }
+  } catch(e) {
+    resDiv.innerHTML = '<div style="color:#ff5555">Error searching.</div>';
   }
 }
 
@@ -158,54 +165,38 @@ async function installPlugin(id) {
 }
 
 function renderCronList() {
-  const c = document.getElementById('cron-list');
-  if (!c) return;
+  const div = document.getElementById('cron-list');
+  div.innerHTML = '';
   if (!currentCronJobs.length) {
-    c.innerHTML = '<span style="color:#aaa; font-style:italic">No scheduled tasks yet.</span>';
+    div.innerHTML = '<span style="color:#aaa;">No tasks scheduled.</span>';
     return;
   }
-  c.innerHTML = currentCronJobs.map((j, i) => `
-    <div style="border:1px solid #444; background:#1e1e1e; padding:10px; display:flex; justify-content:space-between; align-items:center">
-      <div>
-        <div style="color:#9b59b6; font-family:monospace; font-weight:bold">${j.expr}</div>
-        <div style="font-size:0.9em; color:#aaa">> ${j.cmds.join(' && ')}</div>
-      </div>
-      <button onclick="deleteCron(${i})" style="margin:0; width:auto; border-color:#e74c3c; color:#e74c3c">Delete</button>
-    </div>
-  `).join('');
+  currentCronJobs.forEach((c, i) => {
+    const d = document.createElement('div');
+    d.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:#1a1a1a; padding:8px; border:2px solid #333;';
+    d.innerHTML = `<div><strong style="color:#9b59b6; font-family:var(--mc-font-heading); font-size:10px;">${c.expr}</strong><br><span style="color:#aaa; font-size:14px;">> ${c.cmds.join(' && ')}</span></div>`;
+    const b = document.createElement('button');
+    b.className = 'mc-btn sm-btn dark-red-btn';
+    b.innerText = 'Del';
+    b.onclick = () => deleteCron(i);
+    d.appendChild(b);
+    div.appendChild(d);
+  });
 }
 
 async function addCron() {
-  const expr = document.getElementById('new-cron-expr').value;
-  const cmd = document.getElementById('new-cron-cmd').value;
-  if (!expr || !cmd) return alert('Fill out both fields');
-  currentCronJobs.push({ expr, cmds: [cmd] });
-  await saveCron();
+  const e = document.getElementById('new-cron-expr').value;
+  const c = document.getElementById('new-cron-cmd').value;
+  if (!e || !c) return;
+  currentCronJobs.push({ expr: e, cmds: [c] });
+  await saveCfg();
+  renderCronList();
 }
 
-async function deleteCron(i) {
-  if (!confirm('Remove this task?')) return;
-  currentCronJobs.splice(i, 1);
-  await saveCron();
-}
-
-async function saveCron() {
-  try {
-    const s = document.getElementById('setting-start-cmd').value;
-    const r = await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startCmd: s, cronJobs: currentCronJobs })
-    });
-    const d = await r.json();
-    if (d.ok) {
-      renderCronList();
-      document.getElementById('new-cron-expr').value = '';
-      document.getElementById('new-cron-cmd').value = '';
-    } else {
-      alert(d.err);
-    }
-  } catch(e) { alert(e.message); }
+async function deleteCron(idx) {
+  currentCronJobs.splice(idx, 1);
+  await saveCfg();
+  renderCronList();
 }
 
 async function updateStatus() {
@@ -226,8 +217,10 @@ async function updateStatus() {
     document.getElementById('session-name').innerText = 'local-daemon';
     const sIn = document.getElementById('setting-screen-name');
     const cIn = document.getElementById('setting-start-cmd');
+    const tIn = document.getElementById('setting-track-ips');
     if (sIn && document.activeElement !== sIn) sIn.value = 'mc-process';
     if (cIn && document.activeElement !== cIn && d.startCmd) cIn.value = d.startCmd;
+    if (tIn && document.activeElement !== tIn) tIn.checked = !!d.trackPlayerIps;
     
     if (d.cronJobs) {
       currentCronJobs = d.cronJobs;
@@ -597,7 +590,8 @@ async function saveCfg() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         startCmd: document.getElementById('setting-start-cmd').value,
-        cronJobs: currentCronJobs
+        cronJobs: currentCronJobs,
+        trackPlayerIps: document.getElementById('setting-track-ips').checked
       })
     });
     const data = await res.json();

@@ -3,12 +3,13 @@
 basic minecraft server panel. runs your server natively as a background process and streams the logs to a web dashboard.
 
 ## features
-- direct, instant native process management (no buggy screen/tmux layers)
-- file manager (upload, edit, rename, delete, create backups)
-- live terminal stream, send commands direct to console
-- one-click plugin installation via Modrinth
-- scheduled tasks / cron jobs 
-- live metrics (cpu/ram)
+- direct, instant native process management
+- real-time server metrics (cpu, ram, uptime)
+- modrinth plugin installer built-in
+- live stream of server logs & interactive console
+- scheduled cron jobs for automatic backups or restarts
+- player manager with IP geolocation tracking (encrypted locally) and quick-kick/ban
+- fully functional web file explorer & uploader
 - discord oauth whitelist login so randoms can't nuke your server
 
 ## requirements

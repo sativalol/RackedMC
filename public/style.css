@@ -149,6 +149,36 @@ body {
   background-color: var(--mc-red);
 }
 
+.orange-btn {
+  background-color: #d35400;
+  border-color: #7e3300;
+  border-top-color: #e67e22;
+  border-left-color: #e67e22;
+  color: #fff;
+  text-shadow: 2px 2px 0px #5c2b00;
+}
+.orange-btn:hover { background-color: #e67e22; }
+
+.purple-btn {
+  background-color: #8e44ad;
+  border-color: #512b62;
+  border-top-color: #9b59b6;
+  border-left-color: #9b59b6;
+  color: #fff;
+  text-shadow: 2px 2px 0px #3c1f49;
+}
+.purple-btn:hover { background-color: #9b59b6; }
+
+.blue-btn {
+  background-color: #2980b9;
+  border-color: #174b6e;
+  border-top-color: #3498db;
+  border-left-color: #3498db;
+  color: #fff;
+  text-shadow: 2px 2px 0px #133952;
+}
+.blue-btn:hover { background-color: #3498db; }
+
 /* Screens toggling */
 .screen {
   min-height: 100vh;
