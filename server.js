@@ -90,7 +90,7 @@ function run_cmd(cmd) {
     return Promise.resolve();
   }
   return new Promise((res, rej) => {
-    const p = spawn('screen', ['-S', cfg.screenSessionName, '-X', 'stuff', `${cmd}\n`]);
+    const p = spawn('screen', ['-S', cfg.screenSessionName, '-X', 'stuff', `${cmd}\r`]);
     p.on('close', (code) => {
       if (code === 0) res();
       else rej(new Error(`exit code ${code}`));
